@@ -6,28 +6,39 @@
 <title>ART3M7S Monitor</title>
 <style>
   body{background:#111;color:#fff;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
- .tela{background:#222;padding:30px;border-radius:10px;text-align:center}
- .escondido{display:none}
+.tela{background:#222;padding:30px;border-radius:10px;text-align:center;max-width:90%}
+.escondido{display:none}
   input,button{display:block;width:250px;margin:10px auto;padding:12px;border-radius:8px;border:none;font-size:16px}
   button{background:#e50914;color:#fff;cursor:pointer;font-weight:bold}
-  button:hover{background:#b20710}
+  button.copy{background:#22c55e}
   video{width:95vw;max-width:800px;height:60vh;background:#000;border:3px solid #e50914;border-radius:10px;margin-top:10px}
+.erro{color:#ef4444;font-size:14px;margin-top:5px}
+.caixa-link{background:#333;padding:15px;border-radius:8px;margin:15px 0}
+.caixa-link p{margin:5px 0; word-break:break-all}
 </style>
 </head>
 <body>
 
 <div id="tela-login" class="tela">
-  <h1>Login Monitor</h1>
+  <h1>Acesso Monitor</h1>
   <input id="user" placeholder="Usuário" autocomplete="off">
   <input id="pass" type="password" placeholder="Senha" autocomplete="off">
   <button onclick="entrar()">Entrar</button>
-  <p style="font-size:12px;color:#aaa">Usuario: admin | Senha: 1234</p>
+  <p class="erro" id="erroLogin"></p>
 </div>
 
 <div id="tela-monitor" class="tela escondido">
-  <h2>Monitor: Visualizando Transmissão</h2>
+  <h2>Monitor: Visualizando</h2>
+  <p>Aguardando transmissor entrar...</p>
+
+  <div class="caixa-link">
+    <p><b>Mande este link para o Transmissor:</b></p>
+    <p id="linkTransmissor"></p>
+    <button class="copy" onclick="copiarLink()">Copiar Link</button>
+  </div>
+
   <video id="remoteVideo" autoplay playsinline></video>
-  <br><button onclick="location.reload()" class="sec">Sair</button>
+  <br><button onclick="location.reload()">Sair</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -35,34 +46,37 @@
 const socket=io();
 const ROOM="sala-principal";
 const config={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
-let peerConnection;
+
+// PEGA O LINK AUTOMATICO
+const linkTransmissor = window.location.origin + '/transmissor.html';
 
 function entrar(){
   const user=document.getElementById('user').value;
   const pass=document.getElementById('pass').value;
+  const erro=document.getElementById('erroLogin');
   if(user==='admin'&&pass==='1234'){
+    erro.innerText="";
     document.getElementById('tela-login').classList.add('escondido');
     document.getElementById('tela-monitor').classList.remove('escondido');
-    iniciarMonitor();
+    document.getElementById('linkTransmissor').innerText = linkTransmissor; // MOSTRA O LINK
+    socket.emit('join-room',ROOM);
   }else{
-    alert('Usuario: admin Senha: 1234');
+    erro.innerText="Usuário ou senha inválidos"
   }
 }
 
-function iniciarMonitor(){
-  socket.emit('join-room',ROOM);
+function copiarLink(){
+  navigator.clipboard.writeText(linkTransmissor);
+  alert("Link copiado!");
 }
 
 socket.on('offer',async(offer)=>{
-  peerConnection=new RTCPeerConnection(config);
-  peerConnection.ontrack=e=>{
-    document.getElementById('remoteVideo').srcObject=e.streams[0];
-  };
-  await peerConnection.setRemoteDescription(offer);
-  let answer=await peerConnection.createAnswer();
-  await peerConnection.setLocalDescription(answer);
-  socket.emit('answer',answer,ROOM);
+  let pc=new RTCPeerConnection(config);
+  pc.ontrack=e=>document.getElementById('remoteVideo').srcObject=e.streams[0];
+  await pc.setRemoteDescription(offer);
+  let answer=await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit('answer',answer,ROOM)
 });
 </script>
-</body>
-</html>
+</body></html>
