@@ -5,40 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ART3M7S Transmissor</title>
 <style>
-  body {margin:0; background:#0f172a; color:#f2f; font-family:Arial; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; overflow:hidden;}
-  /* VIDEO FICA PEQUENO NO CANTO */
+  body {margin:0; background:#0f172a; color:#fff; font-family:Arial; display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; overflow:hidden;}
   #localVideo {position:absolute; top:10px; right:10px; width:120px; height:160px; background:#000; border:2px solid lime; border-radius:8px; z-index:100; object-fit:cover;}
- .tela {text-align:center; background:#1e293b; padding:25px; border-radius:12px; width:90%; max-width:400px; max-height:90vh; overflow-y:auto;}
-  button {padding:12px 24px; background:#22c55e; border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; margin:5px;}
-  button.sec {background:#475569;} button.adm {background:#f59e0b;} button.perder {background:#ef4444;}
+.tela {text-align:center; background:#1e293b; padding:25px; border-radius:12px; width:90%; max-width:400px;}
+  button {padding:14px 24px; background:#22c55e; border:none; border-radius:8px; color:#fff; font-size:18px; cursor:pointer; margin:8px; width:90%; font-weight:bold;}
+  button:active{background:#16a34a}
+  button.sec {background:#475569;} button.adm {background:#f59e0b;}
   canvas {background:#020617; display:none; border:2px solid #334155; border-radius:8px; touch-action:none;}
   #info {position:absolute; top:10px; left:10px; text-align:left; font-size:15px; display:none; z-index:10; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:5px;}
-  #info span {margin-right:10px; display:block;}.adm-tag {color:#f59e0b; font-weight:bold;}
-  #controles {display:none; position:absolute; bottom:15px; width:100%; justify-content:center;}
-.dpad {display:grid; grid-template-columns:55px 55px 55px; grid-template-rows:55px 55px 55px; gap:4px;}
-.btn-controle {width:55px; height:55px; background:rgba(59,130,246,0.7); border:2px solid #3b82f6; border-radius:12px; color:#fff; font-size:20px; display:flex; justify-content:center; align-items:center; user-select:none;}
-.btn-controle:active {background:rgba(59,130,246,1);}
+  #controles {display:none; position:absolute; bottom:15px; width:100%; justify-content:center; z-index:50; pointer-events:auto;}
+.dpad {display:grid; grid-template-columns:60px 60px 60px; grid-template-rows:60px 60px 60px; gap:6px;}
+.btn-controle {width:60px; height:60px; background:rgba(59,130,246,0.9); border:2px solid #3b82f6; border-radius:15px; color:#fff; font-size:22px; display:flex; justify-content:center; align-items:center; user-select:none; touch-action:none;}
+.btn-controle:active {background:rgba(59,130,246,1); transform:scale(0.9);}
   #btn-cima {grid-column:2; grid-row:1;} #btn-esquerda {grid-column:1; grid-row:2;}
   #btn-direita {grid-column:3; grid-row:2;} #btn-baixo {grid-column:2; grid-row:3;}
-  #btn-acao {position:absolute; right:20px; bottom:70px; width:70px; height:70px; background:rgba(239,68,68,0.8); border-radius:50%; font-size:12px; display:flex; align-items:center; justify-content:center;}
+  #btn-acao {position:absolute; right:20px; bottom:70px; width:80px; height:80px; background:rgba(239,68,68,0.9); border-radius:50%; font-size:13px; display:flex; align-items:center; justify-content:center; touch-action:none;}
   #btn-pular {position:absolute; top:50px; right:10px; display:none; padding:8px 12px; font-size:12px; z-index:10;}
   #btn-pausar {position:absolute; top:10px; left:10px; display:none; padding:8px 12px; font-size:12px; z-index:10;}
-.erro {color:#ef4444; font-size:14px; margin-top:5px}
 .grid-fases {display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px;}
-.btn-fase {padding:10px; font-size:14px;}
+.btn-fase {padding:10px; font-size:14px; width:100%;}
 </style>
 </head>
 <body>
 
 <video id="localVideo" autoplay muted playsinline></video>
 
-<!-- TELA DO JOGO DIRETO -->
 <div id="tela-menu" class="tela">
-  <h1>Transmissor ART3M7S</h1>
-  <p>Câmera ligada. Jogando...</p>
-  <button id="btnJogar">Jogar do Início</button>
-  <button id="btnContinuar">Continuar</button>
-  <button id="btnSom">Som: ON</button>
+  <h1>ART3M7S</h1>
+  <p>1. Clique abaixo<br>2. Permita Câmera<br>3. Jogue</p>
+  <button id="btnJogar">▶ JOGAR</button>
   <button id="btnEscolherFase" class="adm">Escolher Fase</button>
 </div>
 
@@ -54,12 +49,8 @@
   <button id="btnContinuarJogo">Continuar</button>
 </div>
 
-<div id="info">
-  <span id="txtFase"></span>
-  <span id="txtPontos"></span>
-  <span id="admTag" class="adm-tag">[ADM]</span>
-</div>
-<button id="btn-pular" class="adm">PULAR FASE</button>
+<div id="info"><span id="txtFase"></span> <span id="txtPontos"></span> <span style="color:#f59e0b;">[ADM]</span></div>
+<button id="btn-pular" class="adm">PULAR</button>
 <button id="btn-pausar" class="sec">PAUSAR</button>
 <canvas id="jogo"></canvas>
 
@@ -77,53 +68,71 @@
   <h1 id="mensagemFim"></h1>
   <p id="pontuacaoFim"></p>
   <button id="btnTentarNovamente" class="perder">Tentar Novamente</button>
-  <button id="btnMenu" class="sec">Voltar ao Menu</button>
-  <button id="btnReiniciar">Reiniciar Fase</button>
+  <button id="btnMenu" class="sec">Menu</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-/* 1. CODIGO DA CAMERA + WEBRTC - LIGA AUTOMATICO */
-const socket = io(); let localStream; const ROOM = "sala-principal"; let isAdmin = true;
-
-window.onload = async() => {
-  try{
-    localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-    document.getElementById('localVideo').srcObject = localStream;
-    socket.emit('join-room', ROOM);
-    iniciarOferta();
-    iniciarFaseEspecifica(1); // JÁ COMEÇA O JOGO
-  }catch(err){ alert("Permita o acesso a câmera e microfone"); }
-}
-
-async function iniciarOferta(){ let pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); localStream.getTracks().forEach(track => pc.addTrack(track, localStream)); let offer = await pc.createOffer(); await pc.setLocalDescription(offer); socket.emit('offer', offer, ROOM); }
-
-/* 2. SEU JOGO - TIREI TODO LOGIN */
-const canvas = document.getElementById('jogo'); const ctx = canvas.getContext('2d');
-let fase = 1, pontos = 0; let jogoRodando = false, pausado = false, tipoJogo = 1, somOn = true;
+const socket = io(); let localStream; const ROOM = "sala-principal"; let pc;
+let fase = 1, pontos = 0; let jogoRodando = false, pausado = false, tipoJogo = 1;
 let jogador, moedas, inimigos, alvos, tiros=[], tirosInimigo=[], asteroides, chefao, particulas = []; let teclas = {};
 
+async function iniciar() {
+  document.getElementById('tela-menu').style.display = 'none';
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:true});
+    document.getElementById('localVideo').srcObject = localStream;
+
+    pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    socket.emit('join-room', ROOM);
+    let offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('offer', offer, ROOM);
+
+    iniciarFaseEspecifica(1);
+  }catch(err){ alert("Erro: Permita Câmera e Microfone"); console.log(err); }
+}
+
+socket.on('answer', async(answer)=>{ if(pc) await pc.setRemoteDescription(answer); });
+
+function setupControles(){
+  const mapear = { 'btn-cima':'arrowup', 'btn-baixo':'arrowdown', 'btn-esquerda':'arrowleft', 'btn-direita':'arrowright' };
+  Object.keys(mapear).forEach(id=>{
+    const btn = document.getElementById(id); const key = mapear[id];
+    btn.addEventListener('touchstart', e => {e.preventDefault(); teclas[key]=true}, {passive:false});
+    btn.addEventListener('touchend', e => {e.preventDefault(); teclas[key]=false}, {passive:false});
+  });
+  document.getElementById('btn-acao').addEventListener('touchstart', e => {e.preventDefault(); if(tipoJogo===2 || tipoJogo===4) tiros.push({x: jogador.x, y: jogador.y - 15, vel:6})}, {passive:false});
+}
+
+window.onload = () => {
+  setupControles();
+  document.getElementById('btnJogar').onclick = iniciar;
+  document.getElementById('btnEscolherFase').onclick = () => {
+    document.getElementById('tela-menu').style.display = 'none';
+    document.getElementById('tela-escolher-fase').style.display = 'block';
+    let grid = document.getElementById('gridFases'); grid.innerHTML = "";
+    for(let i=1; i<=12; i++) {
+      let btn = document.createElement('button'); btn.innerText = i; btn.className = 'btn-fase adm';
+      btn.onclick = () => {iniciar(); setTimeout(()=>iniciarFaseEspecifica(i),800)};
+      grid.appendChild(btn);
+    }
+  }
+  document.getElementById('btnVoltarMenu').onclick = () => { document.getElementById('tela-escolher-fase').style.display = 'none'; document.getElementById('tela-menu').style.display = 'block'; }
+  document.getElementById('btn-pular').onclick = () => passarFase();
+  document.getElementById('btn-pausar').onclick = () => {pausado=!pausado; document.getElementById('btn-pausar').innerText = pausado? 'RETOMAR' : 'PAUSAR';}
+  document.getElementById('btnContinuarJogo').onclick = iniciarFase;
+  document.getElementById('btnMenu').onclick = () => { document.getElementById('tela-fim').style.display = 'none'; document.getElementById('tela-menu').style.display = 'block'; }
+  document.getElementById('btnTentarNovamente').onclick = () => iniciarFaseEspecifica(fase);
+}
+
+const canvas = document.getElementById('jogo'); const ctx = canvas.getContext('2d');
 function resizeCanvas() { let size = Math.min(window.innerWidth, window.innerHeight) * 0.9; size = Math.min(size, 400); canvas.width = size; canvas.height = size; }
 resizeCanvas(); window.addEventListener('resize', resizeCanvas);
 
-['btn-cima','btn-baixo','btn-esquerda','btn-direita'].forEach((id,i)=>{ let key = ['arrowup','arrowdown','arrowleft','arrowright'][i]; const btn = document.getElementById(id); ['touchstart','mousedown'].forEach(evt => btn.addEventListener(evt, (e) => {e.preventDefault(); teclas[key] = true})); ['touchend','mouseup','mouseleave'].forEach(evt => btn.addEventListener(evt, (e) => {e.preventDefault(); teclas[key] = false})); });
-document.addEventListener('keydown', e => { teclas[e.key.toLowerCase()] = true; if(e.key.toLowerCase() === 'p' || e.key === 'Escape') togglePausa(); });
-document.addEventListener('keyup', e => teclas[e.key.toLowerCase()] = false);
-document.getElementById('btn-acao').addEventListener('touchstart', (e) => {e.preventDefault(); if(tipoJogo===2 || tipoJogo===4) tiros.push({x: jogador.x, y: jogador.y - 15, vel:6}); });
-document.getElementById('btn-pular').onclick = () => { if(isAdmin) passarFase(); }
-document.getElementById('btn-pausar').onclick = togglePausa;
-document.getElementById('btnSom').onclick = () => { somOn =!somOn; document.getElementById('btnSom').innerText = `Som: ${somOn? 'ON' : 'OFF'}`; }
-
-document.getElementById('btnEscolherFase').onclick = () => { document.getElementById('tela-menu').style.display = 'none'; document.getElementById('tela-escolher-fase').style.display = 'block'; let grid = document.getElementById('gridFases'); grid.innerHTML = ""; for(let i=1; i<=12; i++) { let btn = document.createElement('button'); btn.innerText = i; btn.className = 'btn-fase adm'; btn.onclick = () => iniciarFaseEspecifica(i); grid.appendChild(btn); } }
-document.getElementById('btnVoltarMenu').onclick = () => { document.getElementById('tela-escolher-fase').style.display = 'none'; document.getElementById('tela-menu').style.display = 'block'; }
-document.getElementById('btnJogar').onclick = () => iniciarFaseEspecifica(1);
-document.getElementById('btnContinuar').onclick = () => iniciarFaseEspecifica(fase);
-
-function togglePausa() { if(!jogoRodando) return; pausado =!pausado; document.getElementById('btn-pausar').innerText = pausado? 'RETOMAR' : 'PAUSAR'; }
 function getTipoJogo(f) { if(f <= 3) return 1; if(f <= 6) return 2; if(f <= 9) return 3; return 4; }
-
-function iniciarFaseEspecifica(numFase) { fase = numFase; pontos = 0; document.getElementById('tela-menu').style.display = 'none'; document.getElementById('tela-escolher-fase').style.display = 'none'; iniciarFase(); }
-
+function iniciarFaseEspecifica(numFase) { fase = numFase; pontos = 0; document.getElementById('tela-escolher-fase').style.display = 'none'; iniciarFase(); }
 function addParticula(x,y,cor='#facc15') { for(let i=0;i<8;i++) particulas.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:20,cor}); }
 
 function iniciarFase() {
@@ -139,16 +148,51 @@ function iniciarFase() {
 }
 
 function loop() { if(!jogoRodando) return; if(!pausado) { atualizar(); } desenhar(); requestAnimationFrame(loop); }
-function atualizar() { if(teclas['w'] || teclas['arrowup']) jogador.y -= jogador.vel; if(teclas['s'] || teclas['arrowdown']) jogador.y += jogador.vel; if(teclas['a'] || teclas['arrowleft']) jogador.x -= jogador.vel; if(teclas['d'] || teclas['arrowright']) jogador.x += jogador.vel; jogador.x = Math.max(jogador.t, Math.min(canvas.width-jogador.t, jogador.x)); jogador.y = Math.max(jogador.t, Math.min(canvas.height-jogador.t, jogador.y));
+
+function atualizar() { 
+  if(teclas['arrowup']) jogador.y -= jogador.vel; 
+  if(teclas['arrowdown']) jogador.y += jogador.vel; 
+  if(teclas['arrowleft']) jogador.x -= jogador.vel; 
+  if(teclas['arrowright']) jogador.x += jogador.vel; 
+  jogador.x = Math.max(jogador.t, Math.min(canvas.width-jogador.t, jogador.x)); 
+  jogador.y = Math.max(jogador.t, Math.min(canvas.height-jogador.t, jogador.y));
   particulas = particulas.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life--; return p.life>0; });
-  if(tipoJogo === 1) { moedas = moedas.filter(m => { if(Math.hypot(jogador.x - m.x, jogador.y - m.y) < jogador.t + m.t) { pontos += 10; addParticula(m.x,m.y); return false; } return true; }); if(moedas.length === 0) { passarFase(); return; } inimigos.forEach(i => { i.x += i.vx; i.y += i.vy; if(i.x < i.t || i.x > canvas.width-i.t) i.vx *= -1; if(i.y < i.t || i.y > canvas.height-i.t) i.vy *= -1; if(Math.hypot(jogador.x - i.x, jogador.y - i.y) < jogador.t + i.t) fimDeJogo("Você Perdeu!"); }); }
-  else if(tipoJogo === 2) { for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); } alvos.forEach(a => a.y += a.vel); for(let ti=tiros.length-1; ti>=0; ti--) { for(let ai=alvos.length-1; ai>=0; ai--) { if(Math.hypot(tiros[ti].x - alvos[ai].x, tiros[ti].y - alvos[ai].y) < 8) { pontos += 20; addParticula(alvos[ai].x,alvos[ai].y); alvos.splice(ai,1); tiros.splice(ti,1); break; } } } if(alvos.some(a => a.y > canvas.height)) fimDeJogo("Você Perdeu!"); if(alvos.length === 0) { pontos += 50; passarFase(); return; } }
-  else if(tipoJogo === 3) { asteroides.forEach(a => a.y += a.vel); if(asteroides.some(a => Math.hypot(jogador.x - a.x, jogador.y - a.y) < jogador.t + a.t)) fimDeJogo("Você Perdeu!"); if(asteroides.every(a => a.y > canvas.height)) { pontos += 50; passarFase(); return; } }
-  else if(tipoJogo === 4) { for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); } for(let ti=tirosInimigo.length-1; ti>=0; ti--) { tirosInimigo[ti].y += tirosInimigo[ti].vel; if(tirosInimigo[ti].y > canvas.height) tirosInimigo.splice(ti,1); if(Math.hypot(jogador.x - tirosInimigo[ti].x, jogador.y - tirosInimigo[ti].y) < jogador.t) fimDeJogo("Você Perdeu!"); } chefao.x += chefao.vx; if(chefao.x < chefao.t || chefao.x > canvas.width-chefao.t) chefao.vx *= -1; chefao.shootCD--; if(chefao.shootCD <= 0 && fase > 9) { tirosInimigo.push({x:chefao.x, y:chefao.y+chefao.t, vel:3}); chefao.shootCD = 60 - fase*3; } for(let ti=tiros.length-1; ti>=0; ti--) { if(Math.hypot(tiros[ti].x - chefao.x, tiros[ti].y - chefao.y) < 20) { chefao.vida -= 1; pontos += 30; addParticula(tiros[ti].x,tiros[ti].y,'#ef4444'); tiros.splice(ti,1); } } if(Math.hypot(jogador.x - chefao.x, jogador.y - chefao.y) < jogador.t + chefao.t) fimDeJogo("Você Perdeu!"); if(chefao.vida <= 0) { pontos += 200; passarFase(); return; } }
+  
+  if(tipoJogo === 1) { 
+    moedas = moedas.filter(m => { if(Math.hypot(jogador.x - m.x, jogador.y - m.y) < jogador.t + m.t) { pontos += 10; addParticula(m.x,m.y); return false; } return true; }); 
+    if(moedas.length === 0) { passarFase(); return; } 
+    inimigos.forEach(i => { i.x += i.vx; i.y += i.vy; if(i.x < i.t || i.x > canvas.width-i.t) i.vx *= -1; if(i.y < i.t || i.y > canvas.height-i.t) i.vy *= -1; if(Math.hypot(jogador.x - i.x, jogador.y - i.y) < jogador.t + i.t) fimDeJogo("Você Perdeu!"); }); 
+  }
+  else if(tipoJogo === 2) { 
+    for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); } 
+    alvos.forEach(a => a.y += a.vel); 
+    for(let ti=tiros.length-1; ti>=0; ti--) { 
+      for(let ai=alvos.length-1; ai>=0; ai--) { 
+        if(Math.hypot(tiros[ti].x - alvos[ai].x, tiros[ti].y - alvos[ai].y) < 8) { pontos += 20; addParticula(alvos[ai].x,alvos[ai].y); alvos.splice(ai,1); tiros.splice(ti,1); break; } 
+      } 
+    }
+    if(alvos.some(a => a.y > canvas.height)) fimDeJogo("Você Perdeu!"); 
+    if(alvos.length === 0) { pontos += 50; passarFase(); return; } 
+  }
+  else if(tipoJogo === 3) { 
+    asteroides.forEach(a => a.y += a.vel); 
+    if(asteroides.some(a => Math.hypot(jogador.x - a.x, jogador.y - a.y) < jogador.t + a.t)) fimDeJogo("Você Perdeu!"); 
+    if(asteroides.every(a => a.y > canvas.height)) { pontos += 50; passarFase(); return; } 
+  }
+  else if(tipoJogo === 4) { 
+    for(let ti=tiros.length-1; ti>=0; ti--) { tiros[ti].y -= tiros[ti].vel; if(tiros[ti].y < 0) tiros.splice(ti,1); } 
+    for(let ti=tirosInimigo.length-1; ti>=0; ti--) { tirosInimigo[ti].y += tirosInimigo[ti].vel; if(tirosInimigo[ti].y > canvas.height) tirosInimigo.splice(ti,1); if(Math.hypot(jogador.x - tirosInimigo[ti].x, jogador.y - tirosInimigo[ti].y) < jogador.t) fimDeJogo("Você Perdeu!"); } 
+    chefao.x += chefao.vx; if(chefao.x < chefao.t || chefao.x > canvas.width-chefao.t) chefao.vx *= -1; chefao.shootCD--; 
+    if(chefao.shootCD <= 0 && fase > 9) { tirosInimigo.push({x:chefao.x, y:chefao.y+chefao.t, vel:3}); chefao.shootCD = 60 - fase*3; } 
+    for(let ti=tiros.length-1; ti>=0; ti--) { if(Math.hypot(tiros[ti].x - chefao.x, tiros[ti].y - chefao.y) < 20) { chefao.vida -= 1; pontos += 30; addParticula(tiros[ti].x,tiros[ti].y,'#ef4444'); tiros.splice(ti,1); }
+    if(Math.hypot(jogador.x - chefao.x, jogador.y - chefao.y) < jogador.t + chefao.t) fimDeJogo("Você Perdeu!"); 
+    if(chefao.vida <= 0) { pontos += 200; passarFase(); return; } 
+  } // <- FECHEI AQUI
   document.getElementById('txtFase').innerText = `Fase: ${fase}/12`; document.getElementById('txtPontos').innerText = `Pontos: ${pontos}`;
 }
+
 function passarFase() { fase++; jogoRodando = false; teclas = {}; canvas.style.display = 'none'; document.getElementById('info').style.display = 'none'; document.getElementById('controles').style.display = 'none'; document.getElementById('btn-pular').style.display = 'none'; document.getElementById('btn-pausar').style.display = 'none';
-  if(fase > 12) { fimDeJogo("Você Venceu o Jogo!"); return; } document.getElementById('tela-transicao').style.display = 'block'; let titulos = ["Coletor de Moedas", "Tiro ao Alvo", "Campo de Asteroides", "Batalha Final"]; let textos = ["Pegue as moedas e fuja", "Destrua os alvos", "Desvie dos asteroides", "Derrote o Chefão"]; let idx = Math.floor((fase-1)/3); document.getElementById('tituloTransicao').innerText = `Fase ${fase}: ${titulos[idx]}`; document.getElementById('textoTransicao').innerText = textos[idx]; document.getElementById('btnContinuarJogo').onclick = iniciarFase;
+  if(fase > 12) { fimDeJogo("Você Venceu o Jogo!"); return; } document.getElementById('tela-transicao').style.display = 'block'; let titulos = ["Coletor", "Tiro", "Asteroide", "Chefão"]; let textos = ["Pegue as moedas", "Destrua os alvos", "Desvie", "Derrote o Chefão"]; let idx = Math.floor((fase-1)/3); document.getElementById('tituloTransicao').innerText = `Fase ${fase}: ${titulos[idx]}`; document.getElementById('textoTransicao').innerText = textos[idx];
 }
 function desenhar() { ctx.clearRect(0,0,canvas.width,canvas.height); let scale = canvas.width / 360;
   if(tipoJogo === 1) { ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.arc(jogador.x, jogador.y, jogador.t, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = "#22c55e"; moedas.forEach(m => {ctx.beginPath(); ctx.arc(m.x, m.y, m.t, 0, Math.PI*2); ctx.fill();}); ctx.fillStyle = "#ef4444"; inimigos.forEach(i => {ctx.beginPath(); ctx.arc(i.x, i.y, i.t, 0, Math.PI*2); ctx.fill();}); }
@@ -157,6 +201,6 @@ function desenhar() { ctx.clearRect(0,0,canvas.width,canvas.height); let scale =
   if(tipoJogo === 4) { ctx.fillStyle = "#f59e0b"; ctx.fillRect(jogador.x - jogador.t, jogador.y - jogador.t*0.7, jogador.t*2, jogador.t*1.3); ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(chefao.x, chefao.y, chefao.t, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = "#22c55e"; tiros.forEach(t => {ctx.fillRect(t.x - 2, t.y, 4, 10);}); ctx.fillStyle = "#f87171"; tirosInimigo.forEach(t => {ctx.fillRect(t.x - 2, t.y, 4, 10);}); ctx.fillStyle = "#000"; ctx.fillRect(canvas.width*0.2, 15*scale, canvas.width*0.6, 10*scale); ctx.fillStyle = "#ef4444"; ctx.fillRect(canvas.width*0.2, 15*scale, (chefao.vida / chefao.maxVida) * canvas.width*0.6, 10*scale); }
   particulas.forEach(p => { ctx.fillStyle = p.cor; ctx.globalAlpha = p.life/20; ctx.fillRect(p.x,p.y,4,4); ctx.globalAlpha = 1; }); if(pausado) { ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle='#fff'; ctx.font='30px Arial'; ctx.textAlign='center'; ctx.fillText('PAUSADO', canvas.width/2, canvas.height/2); }
 }
-function fimDeJogo(msg) { jogoRodando = false; teclas = {}; canvas.style.display = 'none'; document.getElementById('info').style.display = 'none'; document.getElementById('controles').style.display = 'none'; document.getElementById('btn-pular').style.display = 'none'; document.getElementById('btn-pausar').style.display = 'none'; document.getElementById('tela-fim').style.display = 'block'; document.getElementById('mensagemFim').innerText = msg; document.getElementById('pontuacaoFim').innerText = `Pontuação: ${pontos}`; document.getElementById('btnTentarNovamente').onclick = () => iniciarFaseEspecifica(fase); document.getElementById('btnMenu').onclick = () => { document.getElementById('tela-fim').style.display = 'none'; document.getElementById('tela-menu').style.display = 'block'; } document.getElementById('btnReiniciar').onclick = () => iniciarFaseEspecifica(fase); }
+function fimDeJogo(msg) { jogoRodando = false; teclas = {}; canvas.style.display = 'none'; document.getElementById('info').style.display = 'none'; document.getElementById('controles').style.display = 'none'; document.getElementById('btn-pular').style.display = 'none'; document.getElementById('btn-pausar').style.display = 'none'; document.getElementById('tela-fim').style.display = 'block'; document.getElementById('mensagemFim').innerText = msg; document.getElementById('pontuacaoFim').innerText = `Pontuação: ${pontos}`; }
 </script>
 </body></html>
