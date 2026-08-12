@@ -1,226 +1,68 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ART3M7S Transmissão</title>
-    <style>
-        body { font-family: Arial; background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        #login-box { background: #222; padding: 30px; border-radius: 10px; text-align: center; }
-        #login-box input { display: block; width: 250px; padding: 10px; margin: 10px auto; background: #333; border: 1px solid #555; color: #fff; border-radius: 5px; }
-        #login-box button { padding: 10px 20px; background: #e50914; border: none; color: #fff; border-radius: 5px; cursor: pointer; }
-        #app { display: none; }
-        video { width: 45%; background: #000; border: 2px solid #e50914; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ART3M7S Monitor</title>
+<style>
+  body{background:#111;color:#fff;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+ .tela{background:#222;padding:30px;border-radius:10px;text-align:center}
+ .escondido{display:none}
+  input,button{display:block;width:250px;margin:10px auto;padding:12px;border-radius:8px;border:none;font-size:16px}
+  button{background:#e50914;color:#fff;cursor:pointer;font-weight:bold}
+  button:hover{background:#b20710}
+  video{width:95vw;max-width:800px;height:60vh;background:#000;border:3px solid #e50914;border-radius:10px;margin-top:10px}
+</style>
 </head>
 <body>
-    <div id="login-box">
-        <h1>ART3M7S Login</h1>
-        <input type="text" id="username" placeholder="Usuário">
-        <input type="password" id="password" placeholder="Senha">
-        <button onclick="login()">Entrar</button>
-    </div>
 
-    <div id="app">
-        <h2>Sala: sala-principal</h2>
-        <video id="localVideo" autoplay muted playsinline></video>
-        <video id="remoteVideo" autoplay playsinline></video>
-    </div>
+<div id="tela-login" class="tela">
+  <h1>Login Monitor</h1>
+  <input id="user" placeholder="Usuário" autocomplete="off">
+  <input id="pass" type="password" placeholder="Senha" autocomplete="off">
+  <button onclick="entrar()">Entrar</button>
+  <p style="font-size:12px;color:#aaa">Usuario: admin | Senha: 1234</p>
+</div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const USUARIO = "admin";
-        const SENHA = "1234";
-        const ROOM_ID = "sala-principal";
-
-        const socket = io();
-        let localStream;
-        let peerConnection;
-        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-        function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if (user === USUARIO && pass === SENHA) {
-                document.getElementById('login-box').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
-                start(); // Inicia o WebRTC
-            } else {
-                alert('Usuário ou Senha incorretos!');
-            }
-        }
-
-        async function start() {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('localVideo').srcObject = localStream;
-            socket.emit('join-room', ROOM_ID, socket.id);
-        }
-
-        socket.on('user-connected', async (userId) => {
-            peerConnection = new RTCPeerConnection(config);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            peerConnection.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit('offer', offer, ROOM_ID);
-        });
-
-        socket.on('offer', async (offer) => {
-            peerConnection = new RTCPeerConnection(config);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            peerConnection.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
-            await peerConnection.setRemoteDescription(offer);
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('answer', answer, ROOM_ID);
-        });
-
-        socket.on('answer', async (answer) => {
-            await peerConnection.setRemoteDescription(answer);
-        });
-    </script>
-</body>
-</html>  <div id="receiverBox" class="hidden">
-    <h2>Monitor: Visualizando Lado 2</h2>
-    <p>Compartilhe este link com Lado 2:</p>
-    <b id="linkSala"></b>
-    <video id="remoteVideo" autoplay playsinline></video>
-    <p id="status">Aguardando Lado 2 entrar...</p>
-    <button onclick="document.documentElement.requestFullscreen()">⛶ Tela Cheia</button>
-  </div>
-
-  <!-- TELA 3: LADO 2 - ENVIAR -->
-  <div id="senderBox" class="hidden">
-    <h2>Lado 2 - Enviar Câmera</h2>
-    <p><b>Você está compartilhando sua câmera com o monitor</b></p>
-    <video id="localVideo" autoplay muted playsinline></video>
-    <button onclick="iniciarCamera()">Liberar Câmera e Transmitir</button>
-    <p id="senderStatus"></p>
-  </div>
-
+<div id="tela-monitor" class="tela escondido">
+  <h2>Monitor: Visualizando Transmissão</h2>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <br><button onclick="location.reload()" class="sec">Sair</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// Config WebRTC
-const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-let pc, localStream;
-const socket = io();
-let salaAtual = '';
-let tentativasErro = 0;
+const socket=io();
+const ROOM="sala-principal";
+const config={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+let peerConnection;
 
-// Detecta se é Lado 2 pelo link
-const params = new URLSearchParams(window.location.search);
-const ehLado2 = params.get('lado') === '2';
-
-if(ehLado2) {
-  document.getElementById('telaLogin').classList.add('hidden');
-  document.getElementById('senderBox').classList.remove('hidden');
-  salaAtual = params.get('sala');
-  socket.emit('entrar-sala', salaAtual);
-}
-
-// ========== LOGIN SUPABASE ==========
-async function login() {
-  const email = document.getElementById('email').value;
-  const senha = document.getElementById('senha').value;
-
-  const res = await fetch('/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, password:senha})});
-  const data = await res.json();
-
-  if(!res.ok) {
-    tentativasErro++;
-    document.getElementById('erroLogin').innerText = data.error;
-    if(tentativasErro >= 3) document.getElementById('linkRecuperar').classList.remove('hidden');
-    return;
-  }
-  // Login OK - mostra tela do Monitor
-  document.getElementById('telaLogin').classList.add('hidden');
-  document.getElementById('receiverBox').classList.remove('hidden');
-  salaAtual = Math.random().toString(36).substring(2,8);
-  document.getElementById('linkSala').innerText = window.location.origin + '?sala=' + salaAtual + '&lado=2';
-  socket.emit('entrar-sala', salaAtual);
-  iniciarComoReceptor();
-}
-
-async function cadastro(){
-  const email = document.getElementById('email').value;
-  const senha = document.getElementById('senha').value;
-  const res = await fetch('/cadastro', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, password:senha})});
-  const data = await res.json();
-  alert(data.error || 'Cadastrado! Verifique seu email para confirmar.');
-}
-
-async function recuperar() {
-  const email = document.getElementById('email').value;
-  if(!email) return alert('Digite seu email primeiro');
-  await fetch('/recuperar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
-  alert('Enviamos um link de recuperação para seu email');
-}
-
-// ========== WEBRTC ==========
-
-// LADO 2: Pede permissão e liga a câmera
-async function iniciarCamera() {
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: {facingMode: "environment"}, audio: true });
-    document.getElementById('localVideo').srcObject = localStream;
-    document.getElementById('senderStatus').innerText = 'Câmera liberada. Transmitindo...';
-    iniciarComoEmissor();
-  } catch(err) {
-    alert('Erro ao acessar câmera: ' + err.message);
+function entrar(){
+  const user=document.getElementById('user').value;
+  const pass=document.getElementById('pass').value;
+  if(user==='admin'&&pass==='1234'){
+    document.getElementById('tela-login').classList.add('escondido');
+    document.getElementById('tela-monitor').classList.remove('escondido');
+    iniciarMonitor();
+  }else{
+    alert('Usuario: admin Senha: 1234');
   }
 }
 
-// LADO 2: Cria oferta e envia pro Lado 1
-async function iniciarComoEmissor() {
-  pc = new RTCPeerConnection(config);
-  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
-  pc.onicecandidate = e => {
-    if(e.candidate) socket.emit('candidate', {candidate: e.candidate, sala: salaAtual});
-  };
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('offer', {offer, sala: salaAtual});
+function iniciarMonitor(){
+  socket.emit('join-room',ROOM);
 }
 
-// LADO 1: Recebe vídeo do Lado 2
-async function iniciarComoReceptor() {
-  pc = new RTCPeerConnection(config);
-  pc.ontrack = e => {
-    document.getElementById('remoteVideo').srcObject = e.streams[0];
-    document.getElementById('status').innerText = 'Conectado! Recebendo vídeo...';
+socket.on('offer',async(offer)=>{
+  peerConnection=new RTCPeerConnection(config);
+  peerConnection.ontrack=e=>{
+    document.getElementById('remoteVideo').srcObject=e.streams[0];
   };
-  pc.onicecandidate = e => {
-    if(e.candidate) socket.emit('candidate', {candidate: e.candidate, sala: salaAtual});
-  };
-}
-
-// SINALIZAÇÃO VIA SOCKET.IO
-socket.on('usuario-entrou', () => {
-  document.getElementById('status').innerText = 'Lado 2 entrou. Aguardando vídeo...';
-});
-
-socket.on('offer', async data => {
-  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  socket.emit('answer', {answer, sala: salaAtual});
-});
-
-socket.on('answer', async data => {
-  await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-});
-
-socket.on('candidate', async data => {
-  try{
-    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-  }catch(e){
-    console.log('Erro ICE:', e)
-  }
+  await peerConnection.setRemoteDescription(offer);
+  let answer=await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+  socket.emit('answer',answer,ROOM);
 });
 </script>
 </body>
-      </html>
+</html>
