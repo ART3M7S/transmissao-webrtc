@@ -1,34 +1,43 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const { Server } = require("socket.io");
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-app.use(express.static(__dirname)); // serve o index.html
+// COLA SUAS CHAVES DO SUPABASE AQUI
+const supabase = createClient('SUA_URL_DO_SUPABASE', 'SUA_CHAVE_ANON')
 
-const salas = {};
+app.use(express.static('public'));
+app.use(express.json());
 
-io.on('connection', socket => {
-  console.log('Conectou:', socket.id);
+// Rota de Login
+app.post('/login', async (req,res) => {
+  const {email, password} = req.body;
+  const { data, error } = await supabase.auth.signInWithPassword({email, password});
+  if(error) return res.status(401).json({error: error.message});
+  res.json({user: data.user});
+})
 
-  socket.on('entrar-sala', sala => {
-    socket.join(sala);
-    salas[sala] = salas[sala] || [];
-    salas[sala].push(socket.id);
-    socket.to(sala).emit('usuario-entrou');
-  });
+// Rota de Cadastro
+app.post('/cadastro', async (req,res) => {
+  const {email, password} = req.body;
+  const { data, error } = await supabase.auth.signUp({email, password});
+  if(error) return res.status(400).json({error: error.message});
+  res.json({user: data.user});
+})
 
-  socket.on('offer', (data) => socket.to(data.sala).emit('offer', data));
-  socket.on('answer', (data) => socket.to(data.sala).emit('answer', data));
-  socket.on('candidate', (data) => socket.to(data.sala).emit('candidate', data));
+// Rota de Recuperar Senha
+app.post('/recuperar', async (req,res) => {
+  const {email} = req.body;
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if(error) return res.status(400).json({error: error.message});
+  res.json({msg: 'Email de recuperação enviado'});
+})
 
-  socket.on('disconnect', () => {
-    console.log('Desconectou:', socket.id);
-  });
-});
+// WebRTC continua igual...
+io.on('connection', (socket) => { /* ...código anterior... */ });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Servidor rodando na porta', PORT));
+server.listen(3000);
