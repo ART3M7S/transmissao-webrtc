@@ -1,40 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ART3M7S - Transmissão com Login</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 20px; margin:0; }
- .container { max-width: 900px; margin: auto; }
-  video { width: 100%; max-width: 600px; background: #000; border-radius: 12px; border: 2px solid #00ff88; }
-  button { padding: 12px 24px; margin: 10px; border: none; border-radius: 8px; background: #00ff88; color: #000; font-weight: bold; cursor: pointer; font-size: 16px; }
-  button.secundario { background: #555; color:#fff; }
-  input { padding: 10px; border-radius: 6px; border: none; margin: 5px; width: 80%; max-width: 300px; background:#222; color:#fff; }
-.hidden { display: none; }
-  #telaLogin, #receiverBox, #senderBox { background: #222; padding: 20px; border-radius: 12px; margin-top: 20px; max-width:400px; margin:20px auto; }
-  #linkSala { word-break: break-all; color: #00ff88; }
- .erro { color:red; font-size:14px; }
-  a { color:#00aaff; cursor:pointer; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART3M7S Transmissão</title>
+    <style>
+        body { font-family: Arial; background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #login-box { background: #222; padding: 30px; border-radius: 10px; text-align: center; }
+        #login-box input { display: block; width: 250px; padding: 10px; margin: 10px auto; background: #333; border: 1px solid #555; color: #fff; border-radius: 5px; }
+        #login-box button { padding: 10px 20px; background: #e50914; border: none; color: #fff; border-radius: 5px; cursor: pointer; }
+        #app { display: none; }
+        video { width: 45%; background: #000; border: 2px solid #e50914; }
+    </style>
 </head>
 <body>
-<div class="container">
-  <h1>ART3M7S</h1>
+    <div id="login-box">
+        <h1>ART3M7S Login</h1>
+        <input type="text" id="username" placeholder="Usuário">
+        <input type="password" id="password" placeholder="Senha">
+        <button onclick="login()">Entrar</button>
+    </div>
 
-  <!-- TELA 1: LOGIN COM SUPABASE -->
-  <div id="telaLogin">
-    <h2>Login</h2>
-    <input id="email" type="email" placeholder="Seu Email"><br>
-    <input id="senha" type="password" placeholder="Sua Senha"><br>
-    <button onclick="login()">Entrar</button>
-    <button onclick="cadastro()" class="secundario">Cadastrar</button>
-    <p id="erroLogin" class="erro"></p>
-    <a id="linkRecuperar" class="hidden" onclick="recuperar()">Esqueci minha senha</a>
-  </div>
+    <div id="app">
+        <h2>Sala: sala-principal</h2>
+        <video id="localVideo" autoplay muted playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
 
-  <!-- TELA 2: LADO 1 - MONITOR -->
-  <div id="receiverBox" class="hidden">
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const USUARIO = "admin";
+        const SENHA = "1234";
+        const ROOM_ID = "sala-principal";
+
+        const socket = io();
+        let localStream;
+        let peerConnection;
+        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === USUARIO && pass === SENHA) {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                start(); // Inicia o WebRTC
+            } else {
+                alert('Usuário ou Senha incorretos!');
+            }
+        }
+
+        async function start() {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('localVideo').srcObject = localStream;
+            socket.emit('join-room', ROOM_ID, socket.id);
+        }
+
+        socket.on('user-connected', async (userId) => {
+            peerConnection = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            peerConnection.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit('offer', offer, ROOM_ID);
+        });
+
+        socket.on('offer', async (offer) => {
+            peerConnection = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            peerConnection.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
+            await peerConnection.setRemoteDescription(offer);
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', answer, ROOM_ID);
+        });
+
+        socket.on('answer', async (answer) => {
+            await peerConnection.setRemoteDescription(answer);
+        });
+    </script>
+</body>
+</html>  <div id="receiverBox" class="hidden">
     <h2>Monitor: Visualizando Lado 2</h2>
     <p>Compartilhe este link com Lado 2:</p>
     <b id="linkSala"></b>
